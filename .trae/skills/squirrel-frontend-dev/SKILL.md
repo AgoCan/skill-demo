@@ -8,6 +8,9 @@ description: "Squirrel 运维平台前端开发技能。提供 API 接口、设�
 ## 项目概述
 为 Squirrel API Server 构建前端界面，使用 Vue3 + TypeScript + Vite 技术栈，遵循反主流设计美学的现代化运维平台。
 
+## 路由
+- 使用history模式
+
 ## API 接口参考
 
 ### 认证 (Auth)
@@ -89,6 +92,7 @@ DELETE /api/v1/app-store/{id}      # 删除应用模板
 - 记住密码
 - 错误提示
 - 深色背景
+- 登录默认账号密码提示： demo/squ123
 
 ### 服务器管理 (Server)
 - 服务器列表展示
@@ -180,11 +184,17 @@ front
 - 真实图片：使用 Pexels 搜索（https://www.pexels.com）
 - 插画：使用 unDraw（https://undraw.co）
 
+## 后端路由
+
+- dev调试时候，请求192.168.37.20:10700/api/v1
+- 生产环境，请求自身端口/api/v1
+
 #### 注意事项
 - 必须有导航栏和侧边栏
 - 所有页面都必须有浅色背景
 - 蓝色系列是运维平台的现代化颜色
 - 不要使用终端的方式创建目录内容
+- 除了login，都需要先登录，不然则返回/login页面
 
 ## 技术栈
 - Vue3
