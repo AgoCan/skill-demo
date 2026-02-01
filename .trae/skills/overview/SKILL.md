@@ -22,7 +22,6 @@ description: "概览页面设计规范。包含服务器列表导航、监控数
 #### 基础数据展示
 - 执行脚本内容
 - 已经安装应用数量
-- 
 
 #### 监控数据展示框
 - 布局：一个框内展示四个监控指标，在基础数据下面，宽度是 100%
@@ -33,8 +32,10 @@ description: "概览页面设计规范。包含服务器列表导航、监控数
   - 内存： 圆圈下面展示： 1.28 GB / 7.38 GB
   - 磁盘： 圆圈下面展示： 30.01 GB / 196.49 GB
   - 负载： 圆圈下面展示： 运行流畅
+- 内存和磁盘的使用率，注意是百分比，要除以100
+- class: monitor-item
 
-#### 鼠标悬停交互
+##### 鼠标悬停交互
 
 **CPU 悬停显示：**
 - 所有 CPU 核数和使用率
@@ -54,19 +55,25 @@ description: "概览页面设计规范。包含服务器列表导航、监控数
 - 5 分钟负载
 - 15 分钟负载
 
-##### 鼠标悬停交互
+##### 交互规则
+1. 点击服务器列表中的服务器，切换显示对应服务器的监控数据
+2. 鼠标移动到圆形监控指标上，显示详细信息
+3. 在详细信息面板中，可以移动鼠标到进程列表进行操作
+4. 支持杀死进程等简单操作
+5. monitor-item的下面是漂浮窗口
+
+#### 网卡流量和io的详细信息
+
+- 10秒请求一次，然后展示在前端页面进行保留
+- 做折线图
+- 一个矿口可以选择展示网卡流量或io的详细信息，select选择
+- 另外一个select可以选择哪个网卡或者哪个磁盘
 
 ### 右侧信息区
 - 位置：右侧固定显示
 - 内容：
   - 服务器基础信息，包括： 架构信息，版本信息，运行时间
   - 应用详细列表，但是只展示name和状态
-
-## 交互规则
-1. 点击服务器列表中的服务器，切换显示对应服务器的监控数据
-2. 鼠标移动到圆形监控指标上，显示详细信息
-3. 在详细信息面板中，可以移动鼠标到进程列表进行操作
-4. 支持杀死进程等简单操作
 
 ### 注意事项
 - 交互的时候，容易出现，鼠标移动不到详细页面上面，因为距离太远，鼠标已经跳出去了
@@ -79,9 +86,9 @@ GET /api/v1/monitor/stats/io/{server_id}/{disk}     # 获取单个磁盘IO
 GET /api/v1/monitor/stats/io/{server_id}/all       # 获取所有磁盘IO
 GET /api/v1/monitor/stats/net/{server_id}/{net}    # 获取单个网络IO
 GET /api/v1/monitor/stats/net/{server_id}/all      # 获取所有网络IO
-GET /api/v1/monitor/base/{server_id}/{start}/{end} # 获取基础监控数据
-GET /api/v1/monitor/disk/{server_id}/{start}/{end} # 获取磁盘监控数据
-GET /api/v1/monitor/net/{server_id}/{start}/{end}  # 获取网络监控数据
+GET /api/v1/monitor/base/{server_id}/{page}/{count} # 获取基础监控数据
+GET /api/v1/monitor/disk/{server_id}/{page}/{count} # 获取磁盘监控数据
+GET /api/v1/monitor/net/{server_id}/{page}/{count}  # 获取网络监控数据
 GET /api/v1/server           # 获取所有服务器
 GET /api/v1/server/{id}      # 获取单个服务器
 GET /api/v1/application           # 获取所有应用
@@ -95,3 +102,7 @@ GET /api/v1/application/{id}      # 获取单个应用
 - 悬停交互流畅自然
 - 进程操作简单直观
 - 不要为了写这个页面，把外层的 nav和header给搞没了
+
+## 接口案例文件
+
+- .trae\skills\overview\api.md
