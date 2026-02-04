@@ -27,6 +27,7 @@ description: "Squirrel 运维平台前端布局架构技能。提供前端整体
 - **utils**：工具函数
 - **types**：类型定义
 - **lang**：国际化语言包
+- **styles**：通用样式管理
 
 #### 布局模块结构
 ```
@@ -89,6 +90,23 @@ lang/
 │   ├── server.ts           # 服务器管理文本
 │   └── application.ts      # 应用管理文本
 └── i18n.ts                 # 国际化配置
+```
+
+#### Styles 模块结构
+```
+styles/
+├── index.scss              # 样式入口文件
+├── variables.scss          # 全局变量
+├── mixins.scss             # 混合器
+├── functions.scss          # 函数
+├── reset.scss              # 重置样式
+├── base.scss               # 基础样式
+├── layout.scss             # 布局样式
+├── components.scss         # 组件样式
+├── utils.scss              # 工具类
+└── themes/                 # 主题样式
+    ├── default.scss        # 默认主题
+    └── dark.scss           # 深色主题
 ```
 
 ### 2. 数据流管理
