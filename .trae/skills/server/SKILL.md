@@ -9,6 +9,8 @@ description: "Squirrel 服务器管理页面开发规范。包含服务器列表
 
 服务器管理页面提供对服务器的增删改查功能，包括服务器列表展示、添加/编辑服务器、查看详情、SSH 终端连接等功能。
 
+终端连接只有按钮，咱不生成
+
 ## 目录结构
 
 ```
@@ -19,6 +21,18 @@ views/Server/
 │   ├── ServerForm.vue        # 添加/编辑表单
 │   ├── ServerDetail.vue      # 服务器详情弹窗
 │   └── DeleteConfirm.vue     # 删除确认弹窗
+├── composables/
+│   └── useServer.ts          # 服务器相关的可组合函数
+├── types/
+│   └── index.ts              # 类型定义
+├── styles/
+│   ├── server.scss           # 服务器相关组件样式
+│   └── terminal.scss         # 终端连接组件样式
+components/terminal/
+├── index.vue                 # 终端连接组件，占用整个content，关闭terminal的时候，返回服务器列表
+└── ssh.vue                   # 终端连接组件，侧边栏是整个服务器列表
+store/
+└── server.ts                 # 服务器相关的状态管理模块
 ```
 
 ## 类型定义
@@ -272,3 +286,8 @@ const confirmDelete = async () => {
 3. **状态管理**：使用响应式数据管理弹窗显示状态
 4. **错误处理**：API 调用添加 try-catch 处理
 5. **国际化**：所有文本使用 $t() 函数包裹
+6. **terminal**：整个content区域作为终端展示区域
+
+## 接口案例文件
+
+- .trae\skills\server\api.md
