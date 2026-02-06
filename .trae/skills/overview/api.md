@@ -38,7 +38,28 @@
     "ssh_username": "root",
     "ssh_port": 22,
     "auth_type": "password",
-    "status": ""
+    "status": "",
+    "server_info": {
+      "architecture": "x86_64",
+      "hostname": "hank",
+      "ipAddresses": [
+        {
+          "ipv4": [
+            "192.168.37.20"
+          ],
+          "ipv6": [
+            "fe80::20c:29ff:fe06:ee92"
+          ],
+          "name": "ens33"
+        }
+      ],
+      "kernelVersion": "6.8.0-90-generic",
+      "os": "linux",
+      "platform": "ubuntu",
+      "platformVersion": "24.04",
+      "uptime": 467850,
+      "uptimeStr": "5天9小时57分钟"
+    }
   }
 }
 ```
@@ -227,13 +248,22 @@
   "code": 0,
   "message": "success",
   "data": {
-    "device": "all",
-    "readBytes": 2360252416,
-    "readCount": 73827,
-    "readTime": 14982,
-    "writeBytes": 38420815872,
-    "writeCount": 608550,
-    "writeTime": 319649
+    "data": {
+      "device": "all",
+      "readBytes": 2864602624,
+      "writeBytes": 49380958208,
+      "readCount": 104621,
+      "writeCount": 786248,
+      "readTime": 23555,
+      "writeTime": 398127
+    },
+    "devices": [
+      "sda3",
+      "loop0",
+      "sda",
+      "sda1",
+      "sda2"
+    ]
   }
 }
 ```
@@ -265,15 +295,20 @@
   "code": 0,
   "message": "success",
   "data": {
-    "bytesRecv": 1957279815,
-    "bytesSent": 838332602,
-    "dropin": 0,
-    "dropout": 0,
-    "errin": 0,
-    "errout": 0,
-    "name": "all",
-    "packetsRecv": 2963182,
-    "packetsSent": 2225593
+    "data": {
+      "name": "all",
+      "bytesSent": 520853639,
+      "bytesRecv": 2027290465,
+      "packetsSent": 1143828,
+      "packetsRecv": 2127179,
+      "errin": 0,
+      "errout": 0,
+      "dropin": 0,
+      "dropout": 0
+    },
+    "ifnames": [
+      "ens33"
+    ]
   }
 }
 ```
