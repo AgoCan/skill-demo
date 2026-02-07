@@ -1,13 +1,13 @@
 ---
 name: "configs"
-description: "Squirrel 配置管理页面开发规范。包含配置项列表、表单、详情等组件的实现，以及 API 接口和国际化配置。在开发配置管理功能时调用。"
+description: "Squirrel 配置管理页面开发规范。包含配置项列表、表单、搜索、排序、复制等组件的实现，以及 API 接口和国际化配置。在开发配置管理功能时调用。"
 ---
 
 # Squirrel 配置管理页面开发规范
 
 ## 概述
 
-配置管理页面提供对系统配置项的增删改查功能，包括配置列表展示、添加/编辑配置、查看详情等功能。
+配置管理页面提供对系统配置项的增删改查功能，包括配置列表展示、添加/编辑配置、搜索过滤、排序、快速复制等功能。
 
 ## 目录结构
 
@@ -33,12 +33,12 @@ api/
 # 通用组件模块
 components/
 ├── Button.vue                # 按钮组件
-├── Input.vue                 # 输入框组件
+├── Loading.vue               # 加载组件
+├── Empty.vue                 # 空状态组件
+├── PageHeader.vue            # 页面头部组件
 ├── Modal.vue                 # 模态框组件
-├── Table.vue                 # 表格组件
-├── Form.vue                  # 表单组件
-├── FormItem.vue              # 表单项组件
-└── Tag.vue                   # 标签组件
+├── Toast.vue                # 提示组件
+└── index.ts                 # 组件导出
 
 # 类型定义模块
 types/
@@ -289,13 +289,15 @@ export default {
   cancel: '取消',
   save: '保存',
   delete: '删除',
-  loading: '加载中...',
+  edit: '编辑',
+  create: '创建',
   search: '搜索',
+  loading: '加载中...',
+  noData: '暂无数据',
   refresh: '刷新',
-  operation: '操作',
-  success: '成功',
-  failed: '失败',
-  required: '必填项'
+  close: '关闭',
+  back: '返回',
+  submit: '提交'
 }
 ```
 
@@ -334,7 +336,12 @@ export default {
   deleteSuccess: '配置删除成功',
   operationFailed: '操作失败',
   configDetail: '配置详情',
-  basicInfo: '基本信息'
+  basicInfo: '基本信息',
+  searchPlaceholder: '搜索配置键或值...',
+  copy: '复制',
+  copySuccess: '已复制到剪贴板',
+  sortAsc: '升序',
+  sortDesc: '降序'
 }
 ```
 
@@ -360,13 +367,15 @@ export default {
   cancel: 'Cancel',
   save: 'Save',
   delete: 'Delete',
-  loading: 'Loading...',
+  edit: 'Edit',
+  create: 'Create',
   search: 'Search',
+  loading: 'Loading...',
+  noData: 'No Data',
   refresh: 'Refresh',
-  operation: 'Operation',
-  success: 'Success',
-  failed: 'Failed',
-  required: 'Required'
+  close: 'Close',
+  back: 'Back',
+  submit: 'Submit'
 }
 ```
 
@@ -405,7 +414,12 @@ export default {
   deleteSuccess: 'Config deleted successfully',
   operationFailed: 'Operation failed',
   configDetail: 'Config Detail',
-  basicInfo: 'Basic Info'
+  basicInfo: 'Basic Info',
+  searchPlaceholder: 'Search config key or value...',
+  copy: 'Copy',
+  copySuccess: 'Copied to clipboard',
+  sortAsc: 'Ascending',
+  sortDesc: 'Descending'
 }
 ```
 
@@ -454,6 +468,45 @@ export default router
 ## 组件实现要点
 
 ### 通用组件
+
+#### Toast 组件
+
+```vue
+<template>
+  <Transition name="toast">
+    <div v-if="visible" class="toast" :class="`toast--${type}`">
+      <Icon :icon="getIcon()" class="toast-icon" />
+      <span class="toast-message">{{ message }}</span>
+    </div>
+  </Transition>
+</template>
+
+<script setup lang="ts">
+import { Icon } from '@iconify/vue'
+
+interface Props {
+  visible?: boolean
+  message?: string
+  type?: 'success' | 'error' | 'warning' | 'info'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  visible: false,
+  message: '',
+  type: 'success'
+})
+
+const getIcon = () => {
+  const icons: Record<string, string> = {
+    success: 'lucide:check-circle',
+    error: 'lucide:x-circle',
+    warning: 'lucide:alert-triangle',
+    info: 'lucide:info'
+  }
+  return icons[props.type]
+}
+</script>
+```
 
 #### Button 组件
 
@@ -515,180 +568,51 @@ const handleClick = (event: MouseEvent) => {
 </script>
 ```
 
-#### Input 组件
+#### Loading 组件
 
 ```vue
 <template>
-  <div :class="['sq-input', `sq-input--${size}`]">
-    <span v-if="prefixIcon" class="sq-input__prefix">
-      <Icon :icon="prefixIcon" />
-    </span>
-    <input
-      v-model="inputValue"
-      :type="type"
-      :placeholder="placeholder"
-      :disabled="disabled"
-      :readonly="readonly"
-      :maxlength="maxlength"
-      class="sq-input__inner"
-    />
-    <span v-if="clearable && inputValue" class="sq-input__clear" @click="handleClear">
-      <Icon icon="lucide:x" />
-    </span>
-    <span v-if="suffixIcon" class="sq-input__suffix">
-      <Icon :icon="suffixIcon" />
-    </span>
+  <div class="loading-container">
+    <Icon icon="lucide:loader-2" class="loading-icon animate-spin" />
+    <span v-if="text" class="loading-text">{{ text }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed } from 'vue'
 
 interface Props {
-  modelValue?: string | number
-  type?: 'text' | 'password' | 'number'
-  placeholder?: string
-  disabled?: boolean
-  readonly?: boolean
-  clearable?: boolean
-  maxlength?: number
-  prefixIcon?: string
-  suffixIcon?: string
-  size?: 'small' | 'medium' | 'large'
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  type: 'text',
-  disabled: false,
-  readonly: false,
-  clearable: false,
-  size: 'medium'
-})
-
-const emit = defineEmits<{
-  'update:modelValue': [value: string | number]
-}>()
-
-const inputValue = computed({
-  get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val)
-})
-
-const handleClear = () => {
-  emit('update:modelValue', '')
-}
-</script>
-```
-
-#### Modal 组件
-
-```vue
-<template>
-  <Teleport to="body">
-    <Transition name="sq-modal">
-      <div v-if="visible" class="sq-modal__mask" @click="handleMaskClick">
-        <div :class="['sq-modal', `sq-modal--${size}`]" @click.stop>
-          <div v-if="showHeader" class="sq-modal__header">
-            <slot name="header">
-              <span class="sq-modal__title">{{ title }}</span>
-            </slot>
-            <button v-if="showClose" class="sq-modal__close" @click="handleClose">
-              <Icon icon="lucide:x" />
-            </button>
-          </div>
-          <div class="sq-modal__body">
-            <slot />
-          </div>
-          <div v-if="$slots.footer" class="sq-modal__footer">
-            <slot name="footer" />
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-</template>
-
-<script setup lang="ts">
-import { Icon } from '@iconify/vue'
-
-interface Props {
-  visible?: boolean
-  title?: string
-  width?: string | number
-  size?: 'small' | 'medium' | 'large'
-  closeOnClickModal?: boolean
-  showClose?: boolean
-  showHeader?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  visible: false,
-  size: 'medium',
-  closeOnClickModal: true,
-  showClose: true,
-  showHeader: true
-})
-
-const emit = defineEmits<{
-  'update:visible': [value: boolean]
-  close: []
-}>()
-
-const handleMaskClick = () => {
-  if (props.closeOnClickModal) {
-    handleClose()
-  }
-}
-
-const handleClose = () => {
-  emit('update:visible', false)
-  emit('close')
-}
-</script>
-```
-
-#### Table 组件
-
-```vue
-<template>
-  <div class="sq-table">
-    <table>
-      <thead>
-        <tr>
-          <th v-for="column in columns" :key="column.prop" :style="{ width: column.width }">
-            {{ column.label }}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(row, index) in data" :key="index">
-          <td v-for="column in columns" :key="column.prop">
-            <slot :name="column.prop" :row="row" :column="column">
-              {{ row[column.prop] }}
-            </slot>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</template>
-
-<script setup lang="ts">
-interface Column {
-  prop: string
-  label: string
-  width?: string | number
-}
-
-interface Props {
-  data?: any[]
-  columns?: Column[]
+  text?: string
 }
 
 withDefaults(defineProps<Props>(), {
-  data: () => [],
-  columns: () => []
+  text: ''
+})
+</script>
+```
+
+#### Empty 组件
+
+```vue
+<template>
+  <div class="empty-container">
+    <Icon :icon="icon" class="empty-icon" />
+    <p class="empty-text">{{ description }}</p>
+    <slot name="action" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { Icon } from '@iconify/vue'
+
+interface Props {
+  description?: string
+  icon?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  description: '暂无数据',
+  icon: 'lucide:inbox'
 })
 </script>
 ```
@@ -697,8 +621,80 @@ withDefaults(defineProps<Props>(), {
 
 - 使用表格行布局展示配置列表
 - 显示配置键、配置值
-- 操作按钮：查看详情、编辑、删除
+- 支持排序功能（点击表头切换升序/降序）
+- 操作按钮：复制、编辑、删除
 - 配置值过长时使用省略号显示
+
+```vue
+<template>
+  <div class="config-table-container">
+    <table class="config-table">
+      <thead>
+        <tr>
+          <th class="sortable" @click="$emit('sort', 'key')">
+            {{ $t('configs.configKey') }}
+            <Icon :icon="getSortIcon('key')" class="sort-icon" />
+          </th>
+          <th class="sortable" @click="$emit('sort', 'value')">
+            {{ $t('configs.configValue') }}
+            <Icon :icon="getSortIcon('value')" class="sort-icon" />
+          </th>
+          <th>{{ $t('configs.operation') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="config in configs" :key="config.id" class="config-row">
+          <td class="key-cell">
+            <div class="key-wrapper">
+              <Icon icon="lucide:key" class="key-icon" />
+              <span class="key-text">{{ config.key }}</span>
+            </div>
+          </td>
+          <td class="value-cell">
+            <div class="value-wrapper">
+              <span class="value-text" :title="config.value">{{ config.value }}</span>
+            </div>
+          </td>
+          <td class="action-cell">
+            <button class="action-btn copy-btn" :title="$t('configs.copy')" @click="$emit('copy', config.value)">
+              <Icon icon="lucide:copy" />
+            </button>
+            <button class="action-btn edit-btn" :title="$t('configs.editConfig')" @click="$emit('edit', config)">
+              <Icon icon="lucide:edit-2" />
+            </button>
+            <button class="action-btn delete-btn" :title="$t('configs.deleteConfig')" @click="$emit('delete', config)">
+              <Icon icon="lucide:trash-2" />
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { Icon } from '@iconify/vue'
+import type { Config } from '@/types'
+
+const props = defineProps<{
+  configs: Config[]
+  sortBy?: string | null
+  sortOrder?: 'asc' | 'desc'
+}>()
+
+defineEmits<{
+  edit: [config: Config]
+  delete: [config: Config]
+  copy: [value: string]
+  sort: [field: string]
+}>()
+
+const getSortIcon = (field: string) => {
+  if (field !== props.sortBy) return 'lucide:chevrons-up-down'
+  return props.sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'
+}
+</script>
+```
 
 ### ConfigForm 组件
 
@@ -720,6 +716,35 @@ withDefaults(defineProps<Props>(), {
 const configs = ref<Config[]>([])
 const showForm = ref(false)
 const showDeleteConfirm = ref(false)
+const searchKeyword = ref('')
+const sortBy = ref<string | null>(null)
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const toastVisible = ref(false)
+const toastMessage = ref('')
+
+// 过滤和排序
+const filteredConfigs = computed(() => {
+  let result = configs.value
+
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(config => 
+      config.key.toLowerCase().includes(keyword) ||
+      config.value.toLowerCase().includes(keyword)
+    )
+  }
+
+  if (sortBy.value) {
+    result = [...result].sort((a, b) => {
+      const aValue = a[sortBy.value as keyof Config]
+      const bValue = b[sortBy.value as keyof Config]
+      const comparison = String(aValue).localeCompare(String(bValue))
+      return sortOrder.value === 'asc' ? comparison : -comparison
+    })
+  }
+
+  return result
+})
 
 // 加载配置列表
 const loadConfigs = async () => {
@@ -736,12 +761,71 @@ const handleFormSubmit = async (data: CreateConfigRequest | UpdateConfigRequest)
   await loadConfigs()
 }
 
+// 复制配置值
+const handleCopy = async (value: string) => {
+  try {
+    await navigator.clipboard.writeText(value)
+    toastMessage.value = t('configs.copySuccess')
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
+
+// 排序处理
+const handleSort = (field: string) => {
+  if (sortBy.value === field) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = field
+    sortOrder.value = 'asc'
+  }
+}
+
 // 删除确认
 const confirmDelete = async () => {
   await deleteConfig(deletingConfig.value.id)
   await loadConfigs()
 }
 ```
+
+## 功能特性
+
+### 1. 模糊搜索 ⭐⭐⭐⭐
+- 在页面头部添加搜索框
+- 支持按配置键和配置值进行模糊搜索
+- 实时过滤，无需点击搜索按钮
+- 搜索框带清除按钮和搜索图标
+
+### 2. 快速复制 ⭐⭐⭐⭐
+- 在操作列添加复制按钮
+- 点击后自动复制配置值到剪贴板
+- 显示 Toast 提示"已复制到剪贴板"
+- 2 秒后自动消失
+
+### 3. 排序功能 ⭐⭐⭐⭐
+- 支持按配置键升序/降序排列
+- 支持按配置值排序
+- 点击表头进行排序切换
+- 排序图标动态显示
+
+### 4. 添加配置 ⭐⭐⭐
+- 创建新的配置项
+- 表单验证：配置键和配置值都为必填项
+- 支持编辑现有配置
+
+### 5. 编辑配置 ⭐⭐⭐
+- 修改现有配置项
+- 表单预填充当前配置数据
+- 保存后自动刷新列表
+
+### 6. 删除配置 ⭐⭐⭐
+- 带确认对话框的删除功能
+- 显示警告图标和删除提示
+- 删除后自动刷新列表
 
 ## 设计规范
 
@@ -760,6 +844,8 @@ const confirmDelete = async () => {
 4. **国际化**：所有文本使用 $t() 函数包裹
 5. **表单验证**：配置键和配置值都为必填项
 6. **组件复用**：参考 `component-reusability` skill 设计可复用组件
+7. **搜索优化**：使用 computed 实现实时过滤，避免不必要的重新渲染
+8. **排序优化**：支持多字段排序，提供直观的排序图标
 
 ## 架构参考
 
