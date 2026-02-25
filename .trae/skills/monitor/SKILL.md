@@ -81,6 +81,23 @@ types/
 | disk_used | uint64 | 磁盘已用 |
 | collect_time | time | 采集时间 |
 
+### DiskUsageMonitor - 磁盘使用量监控
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uint | 主键 |
+| device_name | string | 设备名称 |
+| mount_point | string | 挂载点路径 |
+| fs_type | string | 文件系统类型 |
+| total | uint64 | 磁盘总量 (bytes) |
+| used | uint64 | 磁盘已用量 (bytes) |
+| free | uint64 | 磁盘剩余量 (bytes) |
+| usage | float64 | 磁盘使用率 (%) |
+| inodes_total | uint64 | inode 总数 |
+| inodes_used | uint64 | inode 已用量 |
+| inodes_free | uint64 | inode 剩余量 |
+| collect_time | time | 采集时间 |
+
 ### DiskIOMonitor - 磁盘 IO 监控
 
 > ⚠️ **重要说明**：以下字段存储的是**系统启动以来的累计值**，不是瞬时速率。前端绘制趋势图时需要计算相邻数据点的差值除以时间间隔，得到速率（bytes/s）。
@@ -149,6 +166,21 @@ export interface BaseMonitorRecord {
   collect_time: string
 }
 
+export interface DiskUsageRecord {
+  id: number
+  device_name: string
+  mount_point: string
+  fs_type: string
+  total: number
+  used: number
+  free: number
+  usage: number
+  inodes_total: number
+  inodes_used: number
+  inodes_free: number
+  collect_time: string
+}
+
 export interface DiskIORecord {
   id: number
   disk_name: string
@@ -187,7 +219,7 @@ export interface PageData<T> {
   size: number
 }
 
-export type TimeRange = '1h' | '6h' | '24h' | '7d' | '30d'
+export type TimeRange = '1h' | '6h' | '24h' | '7d' 
 
 export interface ChartDataPoint {
   time: string
@@ -279,17 +311,17 @@ export function fetchNetIO(serverId: number, iface: string): Promise<any> {
 │  │  ⏱️ 时间范围      [1小时] [6小时] [24小时] [7天] [自定义]               ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                                                             │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐                  │
-│  │      📈 表盘1: CPU       │  │     📈 表盘2: 内存       │                  │
-│  │  ─────────────────────  │  │  ─────────────────────  │                  │
-│  │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁   │  │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁   │                  │
-│  │  │   历史趋势图表        │  │  │   历史趋势图表        │                  │
-│  │  ─────────────────────  │  │  ─────────────────────  │                  │
-│  │  数据: cpu_usage        │  │  数据: memory_usage     │                  │
-│  └─────────────────────────┘  └─────────────────────────┘                  │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐ │
+│  │   📈 表盘1: CPU      │  │  📈 表盘2: 内存      │  │ 💾 表盘3: 磁盘使用量 │ │
+│  │  ─────────────────  │  │  ─────────────────  │  │  ─────────────────  │ │
+│  │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁ │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁  │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁  │ │
+│  │  │   历史趋势图表    │  │ │   历史趋势图表    │  │ │   历史趋势图表    │ │
+│  │  ─────────────────  │  │  ─────────────────  │  │  ─────────────────  │ │
+│  │  数据: cpu_usage    │  │ 数据: memory_usage │  │     [/ ▼]          │ │
+│  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘ │
 │                                                                             │
 │  ┌─────────────────────────┐  ┌─────────────────────────┐                  │
-│  │   💾 表盘3: 磁盘IO       │  │   🌐 表盘4: 网络IO       │                  │
+│  │   💾 表盘4: 磁盘IO       │  │   🌐 表盘5: 网络IO       │                  │
 │  │        [sda ▼]          │  │        [eth0 ▼]         │                  │
 │  │  ─────────────────────  │  │  ─────────────────────  │                  │
 │  │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁   │  │  │ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁   │                  │
@@ -308,8 +340,9 @@ export function fetchNetIO(serverId: number, iface: string): Promise<any> {
 |------|---------|---------|---------|------|
 | **表盘1** | BaseMonitor.cpu_usage | CPU使用率趋势 | 无 | 单一指标，无需筛选 |
 | **表盘2** | BaseMonitor.memory_usage | 内存使用率趋势 | 无 | 单一指标，无需筛选 |
-| **表盘3** | DiskIOMonitor | 所有磁盘IO总量 | sda, sdb, ... , all | 支持选择单个磁盘或总量 |
-| **表盘4** | NetworkMonitor | 所有网卡流量总量 | eth0, eth1, ... , all | 支持选择单个网卡或总量 |
+| **表盘3** | DiskUsageMonitor | 根分区使用率趋势 | /, /home, /data... | 支持选择不同挂载点 |
+| **表盘4** | DiskIOMonitor | 所有磁盘IO总量 | sda, sdb, ... , all | 支持选择单个磁盘或总量 |
+| **表盘5** | NetworkMonitor | 所有网卡流量总量 | eth0, eth1, ... , all | 支持选择单个网卡或总量 |
 
 ## 交互设计
 
@@ -678,6 +711,206 @@ watch(() => props.data, () => nextTick(() => updateChart()), { deep: true })
 .chart-value.normal { color: #67c23a; }
 .chart-value.warning { color: #e6a23c; }
 .chart-value.danger { color: #f56c6c; }
+
+.chart-info {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.chart-container {
+  height: 200px;
+  width: 100%;
+}
+</style>
+```
+
+### DiskUsageChart 组件
+
+```vue
+<template>
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3 class="chart-title">
+        <Icon icon="lucide:hard-drive" />
+        {{ $t('monitor.diskUsage') }}
+      </h3>
+      <select v-model="selectedMount" class="device-select">
+        <option v-for="mount in mountPoints" :key="mount" :value="mount">
+          {{ mount }}
+        </option>
+      </select>
+    </div>
+    <div class="chart-info">
+      {{ formatBytes(latestUsed) }} / {{ formatBytes(latestTotal) }}
+    </div>
+    <div class="chart-container" ref="chartContainer"></div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
+import * as echarts from 'echarts'
+import type { DiskUsageRecord } from '@/types/monitor'
+import { formatPercent, formatBytes } from '@/utils/format'
+
+const props = defineProps<{
+  data: DiskUsageRecord[]
+  mountPoints: string[]
+}>()
+
+const chartContainer = ref<HTMLDivElement>()
+let chartInstance: echarts.ECharts | null = null
+
+const selectedMount = ref('/')
+
+const filteredData = computed(() => {
+  return props.data.filter(d => d.mount_point === selectedMount.value)
+})
+
+const latestValue = computed(() => {
+  if (filteredData.value.length === 0) return 0
+  return filteredData.value[filteredData.value.length - 1].usage
+})
+
+const latestUsed = computed(() => {
+  if (filteredData.value.length === 0) return 0
+  return filteredData.value[filteredData.value.length - 1].used
+})
+
+const latestTotal = computed(() => {
+  if (filteredData.value.length === 0) return 0
+  return filteredData.value[filteredData.value.length - 1].total
+})
+
+const getUsageClass = (value: number) => {
+  if (value >= 90) return 'danger'
+  if (value >= 70) return 'warning'
+  return 'normal'
+}
+
+const getChartOption = () => {
+  const times = filteredData.value.map(d =>
+    new Date(d.collect_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  )
+  const values = filteredData.value.map(d => d.usage)
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        return `<strong>${params[0].axisValue}</strong><br/>
+                ${$t('monitor.diskUsage')}: ${params[0].value.toFixed(2)}%`
+      }
+    },
+    grid: {
+      left: '2%',
+      right: '2%',
+      bottom: '15%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: times,
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { color: '#64748b', fontSize: 11, rotate: 30 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } },
+      axisLabel: {
+        color: '#64748b',
+        fontSize: 11,
+        formatter: '{value}%'
+      }
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      symbol: 'none',
+      lineStyle: { width: 2, color: '#e6a23c' },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(230, 162, 60, 0.3)' },
+            { offset: 1, color: 'rgba(230, 162, 60, 0)' }
+          ]
+        }
+      },
+      data: values
+    }]
+  }
+}
+
+const initChart = () => {
+  if (!chartContainer.value) return
+  chartInstance = echarts.init(chartContainer.value)
+  updateChart()
+}
+
+const updateChart = () => {
+  if (!chartInstance) return
+  chartInstance.setOption(getChartOption())
+}
+
+const handleResize = () => chartInstance?.resize()
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  nextTick(() => initChart())
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  chartInstance?.dispose()
+})
+
+watch([() => props.data, selectedMount], () => nextTick(() => updateChart()), { deep: true })
+</script>
+
+<style scoped>
+.chart-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e3a5f;
+  margin: 0;
+}
+
+.device-select {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #1e3a5f;
+  cursor: pointer;
+}
 
 .chart-info {
   font-size: 12px;
