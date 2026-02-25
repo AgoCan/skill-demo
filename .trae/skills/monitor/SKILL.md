@@ -83,38 +83,54 @@ types/
 
 ### DiskIOMonitor - 磁盘 IO 监控
 
+> ⚠️ **重要说明**：以下字段存储的是**系统启动以来的累计值**，不是瞬时速率。前端绘制趋势图时需要计算相邻数据点的差值除以时间间隔，得到速率（bytes/s）。
+
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | uint | 主键 |
 | disk_name | string | 磁盘设备名 (sda, sdb...) |
-| read_count | uint64 | 读取次数 |
-| write_count | uint64 | 写入次数 |
-| read_bytes | uint64 | 读取字节数 |
-| write_bytes | uint64 | 写入字节数 |
-| read_time | uint64 | 读取时间 (ms) |
-| write_time | uint64 | 写入时间 (ms) |
+| read_count | uint64 | 累计读取次数 |
+| write_count | uint64 | 累计写入次数 |
+| read_bytes | uint64 | 累计读取字节数（系统启动以来） |
+| write_bytes | uint64 | 累计写入字节数（系统启动以来） |
+| read_time | uint64 | 累计读取时间 (ms) |
+| write_time | uint64 | 累计写入时间 (ms) |
 | io_time | uint64 | IO时间 |
 | weighted_io_time | uint64 | 加权IO时间 |
 | iops_in_progress | uint64 | 进行中的IOPS |
 | collect_time | time | 采集时间 |
 
+**速率计算公式**：
+```
+读取速率 (bytes/s) = (当前 read_bytes - 上次 read_bytes) / (当前 collect_time - 上次 collect_time)
+写入速率 (bytes/s) = (当前 write_bytes - 上次 write_bytes) / (当前 collect_time - 上次 collect_time)
+```
+
 ### NetworkMonitor - 网络监控
+
+> ⚠️ **重要说明**：以下字段存储的是**系统启动以来的累计值**，不是瞬时速率。前端绘制趋势图时需要计算相邻数据点的差值除以时间间隔，得到速率（bytes/s）。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | uint | 主键 |
 | interface_name | string | 网卡名 (eth0, eth1...) |
-| bytes_sent | uint64 | 发送字节数 |
-| bytes_recv | uint64 | 接收字节数 |
-| packets_sent | uint64 | 发送包数 |
-| packets_recv | uint64 | 接收包数 |
-| err_in | uint64 | 接收错误数 |
-| err_out | uint64 | 发送错误数 |
-| drop_in | uint64 | 接收丢包数 |
-| drop_out | uint64 | 发送丢包数 |
+| bytes_sent | uint64 | 累计发送字节数（系统启动以来） |
+| bytes_recv | uint64 | 累计接收字节数（系统启动以来） |
+| packets_sent | uint64 | 累计发送包数 |
+| packets_recv | uint64 | 累计接收包数 |
+| err_in | uint64 | 累计接收错误数 |
+| err_out | uint64 | 累计发送错误数 |
+| drop_in | uint64 | 累计接收丢包数 |
+| drop_out | uint64 | 累计发送丢包数 |
 | fifo_in | uint64 | FIFO接收 |
 | fifo_out | uint64 | FIFO发送 |
 | collect_time | time | 采集时间 |
+
+**速率计算公式**：
+```
+上传速率 (bytes/s) = (当前 bytes_sent - 上次 bytes_sent) / (当前 collect_time - 上次 collect_time)
+下载速率 (bytes/s) = (当前 bytes_recv - 上次 bytes_recv) / (当前 collect_time - 上次 collect_time)
+```
 
 ## 类型定义
 
@@ -177,6 +193,26 @@ export interface ChartDataPoint {
   time: string
   value1: number
   value2?: number
+}
+
+// 磁盘IO速率记录（前端计算后）
+export interface DiskIOSpeedRecord {
+  collect_time: string
+  read_speed: number      // bytes/s
+  write_speed: number     // bytes/s
+}
+
+// 网络IO速率记录（前端计算后）
+export interface NetworkIOSpeedRecord {
+  collect_time: string
+  upload_speed: number    // bytes/s
+  download_speed: number  // bytes/s
+}
+
+// 设备列表
+export interface DeviceList {
+  disks: string[]
+  interfaces: string[]
 }
 ```
 
@@ -1436,6 +1472,8 @@ export default {
 
 ## 工具函数
 
+### 格式化函数
+
 ```typescript
 // utils/format.ts
 
@@ -1450,6 +1488,127 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
 
 export function formatPercent(value: number, decimals: number = 2): string {
   return value.toFixed(decimals) + '%'
+}
+```
+
+### IO 速率计算函数
+
+```typescript
+// utils/monitor.ts
+
+import type { DiskIORecord, NetworkIORecord } from '@/types/monitor'
+
+// 磁盘IO速率记录（前端计算后）
+export interface DiskIOSpeedRecord {
+  collect_time: string
+  read_speed: number      // bytes/s
+  write_speed: number     // bytes/s
+}
+
+// 网络IO速率记录（前端计算后）
+export interface NetworkIOSpeedRecord {
+  collect_time: string
+  upload_speed: number    // bytes/s
+  download_speed: number  // bytes/s
+}
+
+/**
+ * 将磁盘IO累计值转换为速率
+ * @param records 按时间正序排列的历史记录（旧→新）
+ * @returns 速率记录数组
+ * 
+ * 注意：后端返回的数据通常是倒序（新→旧），需要先反转数组
+ */
+export function calculateDiskIOSpeed(records: DiskIORecord[]): DiskIOSpeedRecord[] {
+  if (records.length < 2) return []
+  
+  const result: DiskIOSpeedRecord[] = []
+  
+  for (let i = 1; i < records.length; i++) {
+    const prev = records[i - 1]
+    const curr = records[i]
+    
+    // 计算时间差（秒）
+    const timeDiff = (new Date(curr.collect_time).getTime() - new Date(prev.collect_time).getTime()) / 1000
+    
+    if (timeDiff <= 0) continue
+    
+    // 计算速率（bytes/s），确保不为负数
+    result.push({
+      collect_time: curr.collect_time,
+      read_speed: Math.max(0, (curr.read_bytes - prev.read_bytes) / timeDiff),
+      write_speed: Math.max(0, (curr.write_bytes - prev.write_bytes) / timeDiff),
+    })
+  }
+  
+  return result
+}
+
+/**
+ * 将网络IO累计值转换为速率
+ * @param records 按时间正序排列的历史记录（旧→新）
+ * @returns 速率记录数组
+ * 
+ * 注意：后端返回的数据通常是倒序（新→旧），需要先反转数组
+ */
+export function calculateNetworkIOSpeed(records: NetworkIORecord[]): NetworkIOSpeedRecord[] {
+  if (records.length < 2) return []
+  
+  const result: NetworkIOSpeedRecord[] = []
+  
+  for (let i = 1; i < records.length; i++) {
+    const prev = records[i - 1]
+    const curr = records[i]
+    
+    // 计算时间差（秒）
+    const timeDiff = (new Date(curr.collect_time).getTime() - new Date(prev.collect_time).getTime()) / 1000
+    
+    if (timeDiff <= 0) continue
+    
+    // 计算速率（bytes/s），确保不为负数
+    result.push({
+      collect_time: curr.collect_time,
+      upload_speed: Math.max(0, (curr.bytes_sent - prev.bytes_sent) / timeDiff),
+      download_speed: Math.max(0, (curr.bytes_recv - prev.bytes_recv) / timeDiff),
+    })
+  }
+  
+  return result
+}
+
+/**
+ * 按设备分组并计算速率
+ * @param records 原始IO记录
+ * @param deviceKey 设备标识字段名
+ * @param calculateFn 速率计算函数
+ */
+export function groupAndCalculateSpeed<T extends { disk_name?: string; interface_name?: string }>(
+  records: T[],
+  deviceKey: 'disk_name' | 'interface_name',
+  calculateFn: (records: T[]) => any[]
+): Map<string, any[]> {
+  const grouped = new Map<string, T[]>()
+  
+  // 按设备分组
+  records.forEach(record => {
+    const device = (record[deviceKey] || 'unknown') as string
+    if (!grouped.has(device)) {
+      grouped.set(device, [])
+    }
+    grouped.get(device)!.push(record)
+  })
+  
+  // 对每个设备分别计算速率
+  const result = new Map<string, any[]>()
+  grouped.forEach((deviceRecords, device) => {
+    // 按时间排序（旧→新）
+    const sorted = [...deviceRecords].sort((a, b) => 
+      new Date(a.collect_time).getTime() - new Date(b.collect_time).getTime()
+    )
+    result.set(device, calculateFn(sorted))
+  })
+  
+  return result
 }
 ```
 
@@ -1472,6 +1631,15 @@ export function formatPercent(value: number, decimals: number = 2): string {
 6. **响应式设计**：使用 CSS Grid 实现自适应布局
 7. **类型安全**：完整的 TypeScript 类型定义
 8. **图表交互**：支持悬停提示、图例切换
+9. **IO 数据处理**：
+   - 后端返回的是累计值，前端必须计算速率
+   - 数据按时间倒序返回，计算前需要先反转数组
+   - 使用 `calculateDiskIOSpeed` 和 `calculateNetworkIOSpeed` 函数处理
+   - 速率值使用 `Math.max(0, ...)` 确保不为负数
+10. **设备筛选**：
+    - 先按设备分组，再分别计算速率
+    - 使用 `groupAndCalculateSpeed` 辅助函数
+    - 选择 "all" 时聚合所有设备的速率
 
 ## 相关文件
 
