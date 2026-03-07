@@ -1,255 +1,81 @@
 ---
-name: "vue-i18n-setup"
-description: "Setup vue-i18n internationalization for Vue3 projects with language switching. Invoke when user needs to add i18n support, create multi-language UI, or implement language toggle functionality."
+name: vue-i18n-setup
+description: 当用户需要为 Vue3 项目添加国际化支持、创建多语言界面或实现语言切换功能时调用。包括语言包配置、切换组件实现和持久化存储。
 ---
 
 # Vue3 + vue-i18n 国际化配置
 
 为 Vue3 项目配置完整的国际化解决方案，包括语言包结构、切换组件和持久化存储。
 
-## 安装依赖
+## 触发条件（When）
 
-```bash
-npm install vue-i18n@9
-```
+当用户请求以下任务时触发此 Skill：
 
-## 目录结构
+- 为 Vue3 项目添加国际化支持
+- 创建多语言界面
+- 实现语言切换功能
+- 配置 vue-i18n
+- 翻译界面文本
 
-```
-src/lang/
-├── index.ts              # i18n 配置入口
-├── zh-CN/                # 中文语言包
-│   ├── index.ts
-│   ├── common.ts         # 通用文本
-│   ├── login.ts          # 登录页
-│   ├── overview.ts       # 概览页
-│   └── layout.ts         # 布局导航
-└── en-US/                # 英文语言包
-    ├── index.ts
-    ├── common.ts
-    ├── login.ts
-    ├── overview.ts
-    └── layout.ts
-```
+## 执行步骤（How）
 
-## 1. 创建 i18n 配置
+### 配置工作流
 
-**src/lang/index.ts**
+在开始执行前复制以下清单，并在每一步完成后显式标记状态。
 
-```typescript
-import { createI18n } from 'vue-i18n'
-import zhCN from './zh-CN'
-import enUS from './en-US'
+- Step 1：安装 vue-i18n@9 依赖
+- Step 2：创建语言包目录结构（src/lang/）
+- Step 3：配置 i18n 实例（src/lang/index.ts）
+- Step 4：创建中英文语言包文件
+- Step 5：在 main.ts 中引入 i18n
+- Step 6：创建语言切换组件
+- Step 7：验证语言切换功能是否正常工作；（反馈闭环）若切换失败，检查语言包路径和配置
 
-const messages = {
-  'zh-CN': zhCN,
-  'en-US': enUS
-}
+### 核心配置要点
 
-export const i18n = createI18n({
-  legacy: false,
-  locale: localStorage.getItem('locale') || 'zh-CN',
-  fallbackLocale: 'zh-CN',
-  messages
-})
+1. **目录结构**
+   ```
+   src/lang/
+   ├── index.ts              # i18n 配置入口
+   ├── zh-CN/                # 中文语言包
+   │   ├── index.ts
+   │   ├── common.ts
+   │   └── ...
+   └── en-US/                # 英文语言包
+       ├── index.ts
+       ├── common.ts
+       └── ...
+   ```
 
-export const availableLocales = [
-  { code: 'zh-CN', name: '简体中文' },
-  { code: 'en-US', name: 'English' }
-]
-```
+2. **i18n 配置**
+   - 使用 `legacy: false` 模式（Composition API）
+   - 从 localStorage 读取持久化的语言设置
+   - 设置 fallbackLocale 为 'zh-CN'
 
-## 2. 创建语言包
+3. **语言包组织**
+   - 按功能模块划分：common、login、layout 等
+   - 使用嵌套命名空间：`$t('layout.overview')`
 
-**src/lang/zh-CN/index.ts**
+4. **语言切换组件**
+   - 显示当前语言名称
+   - 支持下拉菜单选择
+   - 切换后保存到 localStorage
 
-```typescript
-import common from './common'
-import login from './login'
-import overview from './overview'
-import layout from './layout'
+## 输出结果（What）
 
-export default {
-  common,
-  login,
-  overview,
-  layout
-}
-```
+完成配置后，应产出以下内容：
 
-**src/lang/zh-CN/common.ts**
+1. **i18n 配置文件**：src/lang/index.ts
+2. **语言包文件**：zh-CN 和 en-US 目录及其内容
+3. **语言切换组件**：可复用的切换器组件
+4. **使用示例**：在组件中使用 $t() 的示例代码
 
-```typescript
-export default {
-  confirm: '确认',
-  cancel: '取消',
-  save: '保存',
-  delete: '删除',
-  loading: '加载中...',
-  // ...
-}
-```
+## 参考文件
 
-**src/lang/zh-CN/layout.ts**
+详细配置步骤和代码示例请参见：
 
-```typescript
-export default {
-  overview: '概览',
-  servers: '服务器',
-  applications: '应用',
-  monitor: '监控',
-  // ...
-}
-```
-
-## 3. 在 main.ts 中引入
-
-```typescript
-import { createApp } from 'vue'
-import App from './App.vue'
-import { i18n } from './lang'
-
-const app = createApp(App)
-app.use(i18n)
-app.mount('#app')
-```
-
-## 4. 创建语言切换组件
-
-**Header 组件中的语言切换器**
-
-```vue
-<template>
-  <div class="lang-switcher">
-    <button class="lang-btn" @click="showLangMenu = !showLangMenu">
-      <Icon icon="lucide:globe" />
-      <span>{{ currentLocaleName }}</span>
-      <Icon icon="lucide:chevron-down" :class="{ open: showLangMenu }" />
-    </button>
-    <div v-if="showLangMenu" class="lang-menu">
-      <button
-        v-for="loc in availableLocales"
-        :key="loc.code"
-        :class="{ active: currentLocale === loc.code }"
-        @click="switchLocale(loc.code)"
-      >
-        {{ loc.name }}
-      </button>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { availableLocales } from '@/lang'
-
-const { locale } = useI18n()
-const showLangMenu = ref(false)
-
-const currentLocale = computed(() => locale.value)
-const currentLocaleName = computed(() => {
-  const loc = availableLocales.find(l => l.code === locale.value)
-  return loc?.name || locale.value
-})
-
-const switchLocale = (code: string) => {
-  locale.value = code
-  localStorage.setItem('locale', code)
-  showLangMenu.value = false
-}
-</script>
-```
-
-## 5. 在组件中使用
-
-**模板中使用**
-
-```vue
-<template>
-  <h1>{{ $t('login.welcomeBack') }}</h1>
-  <p>{{ $t('overview.status') }}</p>
-</template>
-```
-
-**Script 中使用**
-
-```vue
-<script setup lang="ts">
-import { useI18n } from 'vue-i18n'
-import { computed } from 'vue'
-
-const { t } = useI18n()
-
-const pageTitle = computed(() => {
-  return t('layout.overview')
-})
-</script>
-```
-
-## 6. 动态导航菜单示例
-
-```vue
-<script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
-
-const navItems = computed(() => [
-  { path: '/', label: t('layout.overview'), icon: 'lucide:layout-dashboard' },
-  { path: '/servers', label: t('layout.servers'), icon: 'lucide:server' },
-  // ...
-])
-</script>
-```
-
-## 样式参考
-
-```scss
-.lang-switcher {
-  position: relative;
-}
-
-.lang-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
-
-.lang-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 4px;
-  min-width: 120px;
-  z-index: 100;
-}
-
-.lang-option {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  text-align: left;
-  border: none;
-  background: none;
-  cursor: pointer;
-  
-  &.active {
-    background: #e0f2fe;
-    color: #0284c7;
-  }
-}
-```
+- [setup-guide.md](./setup-guide.md) - 详细配置步骤
+- [code-examples.md](./code-examples.md) - 完整代码示例
 
 ## 最佳实践
 
