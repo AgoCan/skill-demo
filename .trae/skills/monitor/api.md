@@ -1,6 +1,16 @@
+# API 接口
 
-- GET   {{url}}/api/v1/monitor/base/:serverId/:page/:count
+## 目录
 
+- [基础监控数据](#基础监控数据)
+- [磁盘 IO 数据](#磁盘-io-数据)
+- [网络 IO 数据](#网络-io-数据)
+
+## 基础监控数据
+
+**GET** `/api/v1/monitor/base/:serverId/:page/:count`
+
+```json
 {
   "code": 0,
   "message": "success",
@@ -23,9 +33,13 @@
     "total": 1
   }
 }
+```
 
-- GET   {{url}}/api/v1/monitor/disk/:serverId/:page/:count
+## 磁盘 IO 数据
 
+**GET** `/api/v1/monitor/disk/:serverId/:page/:count`
+
+```json
 {
   "code": 0,
   "message": "success",
@@ -58,48 +72,6 @@
         "write_bytes": 7137935360,
         "write_count": 164007,
         "write_time": 57935
-      },
-      {
-        "collect_time": "2026-02-08T13:20:01.014811192Z",
-        "disk_name": "sda1",
-        "id": 3,
-        "io_time": 0,
-        "iops_in_progress": 0,
-        "read_bytes": 266240,
-        "read_count": 65,
-        "read_time": 4,
-        "weighted_io_time": 0,
-        "write_bytes": 0,
-        "write_count": 0,
-        "write_time": 0
-      },
-      {
-        "collect_time": "2026-02-08T13:20:01.014811192Z",
-        "disk_name": "sda2",
-        "id": 4,
-        "io_time": 0,
-        "iops_in_progress": 0,
-        "read_bytes": 5432320,
-        "read_count": 151,
-        "read_time": 20,
-        "weighted_io_time": 0,
-        "write_bytes": 188416,
-        "write_count": 29,
-        "write_time": 5
-      },
-      {
-        "collect_time": "2026-02-08T13:20:01.014811192Z",
-        "disk_name": "sda3",
-        "id": 5,
-        "io_time": 0,
-        "iops_in_progress": 0,
-        "read_bytes": 3804618752,
-        "read_count": 143686,
-        "read_time": 43493,
-        "weighted_io_time": 0,
-        "write_bytes": 7137746944,
-        "write_count": 163978,
-        "write_time": 57930
       }
     ],
     "page": 1,
@@ -107,9 +79,13 @@
     "total": 5
   }
 }
+```
 
-- GET   {{url}}/api/v1/monitor/net/:serverId/:page/:count
+## 网络 IO 数据
 
+**GET** `/api/v1/monitor/net/:serverId/:page/:count`
+
+```json
 {
   "code": 0,
   "message": "success",
@@ -136,3 +112,4 @@
     "total": 1
   }
 }
+```
