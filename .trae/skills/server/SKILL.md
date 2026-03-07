@@ -1,207 +1,99 @@
 ---
-name: "server-management"
-description: "Squirrel 服务器管理页面开发规范。包含服务器列表、表单、详情等组件的实现，以及 API 接口和国际化配置。在开发服务器管理功能时调用。"
+name: server-management
+description: 当用户需要开发 Squirrel 服务器管理页面、实现服务器列表、表单、详情等功能时调用。包含组件实现、API 接口和国际化配置。
 ---
 
 # Squirrel 服务器管理页面开发规范
 
-## 概述
+服务器管理页面提供对服务器的增删改查功能，包括服务器列表展示、添加/编辑服务器、查看详情等功能。
 
-服务器管理页面提供对服务器的增删改查功能，包括服务器列表展示、添加/编辑服务器、查看详情、SSH 终端连接等功能。
+## 触发条件（When）
 
-终端连接只有按钮，咱不生成
+当用户请求以下任务时触发此 Skill：
 
-## 目录结构
+- 开发服务器管理页面
+- 实现服务器列表展示
+- 创建服务器表单
+- 实现服务器详情查看
+- 对接服务器管理 API
 
-```
-views/Server/
-├── index.vue                 # 页面入口
-├── components/
-│   ├── ServerTable.vue       # 服务器列表表格
-│   ├── ServerForm.vue        # 添加/编辑表单
-│   ├── ServerDetail.vue      # 服务器详情弹窗
-│   └── DeleteConfirm.vue     # 删除确认弹窗
-├── composables/
-│   └── useServer.ts          # 服务器相关的可组合函数
-├── types/
-│   └── index.ts              # 类型定义
-├── styles/
-│   ├── server.scss           # 服务器相关组件样式
-│   └── terminal.scss         # 终端连接组件样式
-components/terminal/
-├── index.vue                 # 终端连接组件，占用整个content，关闭terminal的时候，返回服务器列表
-└── ssh.vue                   # 终端连接组件，侧边栏是整个服务器列表
-store/
-└── server.ts                 # 服务器相关的状态管理模块
-```
+## 执行步骤（How）
 
-## 类型定义
+### 开发工作流
 
-```typescript
-// types/index.ts
+在开始执行前复制以下清单，并在每一步完成后显式标记状态。
 
-// IP地址类型
-export interface IpAddress {
-  ipv4: string[]
-  ipv6: string[]
-  name: string
-}
+- Step 1：创建目录结构（views/Server/）
+- Step 2：定义类型（types/index.ts）
+- Step 3：实现 API 接口（api/server.ts）
+- Step 4：创建服务器表格组件（ServerTable.vue）
+- Step 5：创建表单组件（ServerForm.vue）
+- Step 6：创建详情组件（ServerDetail.vue）
+- Step 7：创建删除确认组件（DeleteConfirm.vue）
+- Step 8：实现主页面逻辑（index.vue）
+- Step 9：添加国际化配置（lang/zh-CN/server.ts）
+- Step 10：配置路由；（反馈闭环）验证所有功能是否正常工作
 
-// 服务器详细信息
-export interface ServerInfo {
-  architecture: string
-  hostname: string
-  ipAddresses: IpAddress[]
-  kernelVersion: string
-  os: string
-  platform: string
-  platformVersion: string
-  uptime: number
-  uptimeStr: string
-}
+### 核心开发要点
 
-// 服务器类型
-export interface Server {
-  id: number
-  hostname: string
-  ip_address: string
-  ssh_username: string
-  ssh_port: number
-  auth_type: 'password' | 'key'
-  status: 'online' | 'offline' | 'unknown' | 'active'
-  server_info?: ServerInfo | null
-  server_alias?: string
-}
+1. **目录结构**
+   ```
+   views/Server/
+   ├── index.vue                 # 页面入口
+   ├── components/
+   │   ├── ServerTable.vue       # 服务器列表表格
+   │   ├── ServerForm.vue        # 添加/编辑表单
+   │   ├── ServerDetail.vue      # 服务器详情弹窗
+   │   └── DeleteConfirm.vue     # 删除确认弹窗
+   ├── composables/
+   │   └── useServer.ts          # 服务器相关的可组合函数
+   ├── types/
+   │   └── index.ts              # 类型定义
+   └── styles/
+       └── server.scss           # 服务器相关组件样式
+   ```
 
-// 创建服务器请求
-export interface CreateServerRequest {
-  ip_address: string
-  ssh_username: string
-  ssh_port: number
-  ssh_password?: string
-  ssh_private_key?: string
-  auth_type: 'password' | 'key'
-  status: 'active' | 'inactive'
-  server_alias?: string
-}
+2. **组件实现要点**
+   - ServerTable：使用表格行布局，不是方块卡片
+   - ServerForm：支持添加和编辑两种模式，编辑时密码和密钥可选填
+   - ServerDetail：展示基本信息和系统信息
+   - DeleteConfirm：删除确认弹窗，显示警告图标
 
-// 更新服务器请求
-export interface UpdateServerRequest {
-  ip_address: string
-  ssh_username: string
-  ssh_port: number
-  auth_type: 'password' | 'key'
-  status: 'active' | 'inactive'
-  server_alias?: string
-}
-```
+3. **API 接口**
+   - GET /api/v1/server - 获取服务器列表
+   - GET /api/v1/server/{id} - 获取服务器详情
+   - POST /api/v1/server - 创建服务器
+   - POST /api/v1/server/{id} - 更新服务器
+   - DELETE /api/v1/server/{id} - 删除服务器
 
-## API 接口
+4. **注意事项**
+   - 终端连接只有按钮，不生成终端组件
+   - 使用项目统一的配色方案（主色 #4fc3f7）
+   - 所有文本使用 $t() 函数包裹
+
+## 输出结果（What）
+
+完成开发后，应产出以下内容：
+
+1. **类型定义**：Server、CreateServerRequest、UpdateServerRequest 等
+2. **API 接口**：fetchServers、createServer、updateServer、deleteServer
+3. **组件文件**：ServerTable、ServerForm、ServerDetail、DeleteConfirm
+4. **主页面**：index.vue 包含所有逻辑
+5. **国际化配置**：lang/zh-CN/server.ts
+
+## 参考文件
+
+详细参考信息请参见：
+
+- [api.md](./api.md) - API 接口示例数据
+- [types-reference.md](./types-reference.md) - 类型定义
+- [i18n-reference.md](./i18n-reference.md) - 国际化配置
+
+## 快速参考
+
+### 路由配置
 
 ```typescript
-// api/server.ts
-import { get, post, del } from '@/utils/request'
-import type { Server, CreateServerRequest, UpdateServerRequest } from '@/types'
-
-/**
- * 获取服务器列表
- */
-export function fetchServers(): Promise<Server[]> {
-  return get('/server')
-}
-
-/**
- * 获取服务器详情
- */
-export function fetchServerDetail(serverId: number): Promise<Server> {
-  return get(`/server/${serverId}`)
-}
-
-/**
- * 创建服务器
- */
-export function createServer(data: CreateServerRequest): Promise<string> {
-  return post('/server', data)
-}
-
-/**
- * 更新服务器
- */
-export function updateServer(serverId: number, data: UpdateServerRequest): Promise<string> {
-  return post(`/server/${serverId}`, data)
-}
-
-/**
- * 删除服务器
- */
-export function deleteServer(serverId: number): Promise<string> {
-  return del(`/server/${serverId}`)
-}
-```
-
-## 国际化语言包
-
-```typescript
-// lang/zh-CN/server.ts
-export default {
-  title: '服务器管理',
-  listTitle: '服务器列表',
-  addServer: '添加服务器',
-  editServer: '编辑服务器',
-  deleteServer: '删除服务器',
-  connectTerminal: '连接终端',
-  viewDetail: '查看详情',
-  hostname: '主机名',
-  ipAddress: 'IP地址',
-  sshPort: 'SSH端口',
-  username: '用户名',
-  authType: '认证方式',
-  status: '状态',
-  operation: '操作',
-  alias: '别名',
-  password: '密码',
-  key: '密钥',
-  online: '在线',
-  offline: '离线',
-  unknown: '未知',
-  active: '活跃',
-  inactive: '停用',
-  basicInfo: '基本信息',
-  authInfo: '认证信息',
-  optional: '可选',
-  save: '保存',
-  cancel: '取消',
-  confirm: '确认',
-  confirmDelete: '确认删除',
-  deleteWarning: '确定要删除服务器 "{name}" 吗？此操作不可恢复。',
-  required: '必填项',
-  invalidIp: '请输入有效的IP地址',
-  invalidPort: '端口范围 1-65535',
-  createSuccess: '服务器创建成功',
-  updateSuccess: '服务器更新成功',
-  deleteSuccess: '服务器删除成功',
-  operationFailed: '操作失败',
-  terminal: '终端',
-  connecting: '连接中...',
-  connectionFailed: '连接失败',
-  reconnect: '重新连接',
-  close: '关闭',
-  serverDetail: '服务器详情',
-  systemInfo: '系统信息',
-  os: '操作系统',
-  kernel: '内核版本',
-  architecture: '架构',
-  platform: '平台',
-  platformVersion: '平台版本',
-  uptime: '运行时间',
-  ipAddresses: 'IP地址列表'
-}
-```
-
-## 路由配置
-
-```typescript
-// router/index.ts
 {
   path: '/servers',
   name: 'Servers',
@@ -209,66 +101,13 @@ export default {
 }
 ```
 
-## 组件实现要点
+### 主要功能
 
-### ServerTable 组件
-
-- 使用表格行布局展示服务器列表
-- 显示主机名、IP、端口、用户名、认证方式、状态
-- 操作按钮：终端连接、查看详情、编辑、删除
-- 状态徽章使用不同颜色区分在线/离线/未知
-
-### ServerForm 组件
-
-- 支持添加和编辑两种模式
-- 基本信息：IP地址、SSH端口、用户名、别名
-- 认证信息：密码/密钥切换，编辑时可选填
-- 状态选择：活跃/停用
-- 表单验证：IP格式、端口范围、必填项
-
-### ServerDetail 组件
-
-- 展示服务器基本信息和系统信息
-- 系统信息包括：OS、内核、架构、平台、运行时间
-- IP地址列表展示IPv4和IPv6
-
-### DeleteConfirm 组件
-
-- 删除确认弹窗
-- 显示警告图标和删除提示
-- 确认/取消按钮
-
-## 主页面逻辑
-
-```typescript
-// 主要功能
-const servers = ref<Server[]>([])
-const showForm = ref(false)
-const showDeleteConfirm = ref(false)
-const showDetail = ref(false)
-const showTerminal = ref(false)
-
-// 加载服务器列表
-const loadServers = async () => {
-  servers.value = await fetchServers()
-}
-
-// 表单提交
-const handleFormSubmit = async (data: CreateServerRequest | UpdateServerRequest) => {
-  if (editingServer.value) {
-    await updateServer(editingServer.value.id, data as UpdateServerRequest)
-  } else {
-    await createServer(data as CreateServerRequest)
-  }
-  await loadServers()
-}
-
-// 删除确认
-const confirmDelete = async () => {
-  await deleteServer(deletingServer.value.id)
-  await loadServers()
-}
-```
+- 服务器列表展示
+- 添加/编辑服务器
+- 查看服务器详情
+- 删除服务器
+- 终端连接按钮（仅按钮）
 
 ## 设计规范
 
@@ -286,8 +125,3 @@ const confirmDelete = async () => {
 3. **状态管理**：使用响应式数据管理弹窗显示状态
 4. **错误处理**：API 调用添加 try-catch 处理
 5. **国际化**：所有文本使用 $t() 函数包裹
-6. **terminal**：整个content区域作为终端展示区域
-
-## 接口案例文件
-
-- .trae\skills\server\api.md
