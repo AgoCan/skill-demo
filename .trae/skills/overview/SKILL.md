@@ -1,17 +1,112 @@
 ---
-name: "overview"
-description: "概览页面设计规范。包含服务器列表导航、监控数据展示、进程管理等交互功能。在创建概览页面或实现服务器监控功能时调用。"
+name: overview
+description: 当用户需要创建概览页面或实现服务器监控功能时调用。包含服务器列表导航、监控数据展示、进程管理等交互功能。
 ---
 
 # 概览页面设计规范
 
-## 路由配置
-- 路由路径：`/`（不要使用 `/dashboard`）
-- 这是系统的首页，展示所有服务器概览
+概览页面是系统的首页，展示所有服务器概览，包括监控数据展示、进程管理等功能。
 
-## 页面布局
+## 触发条件（When）
+
+当用户请求以下任务时触发此 Skill：
+
+- 创建概览页面
+- 实现服务器监控功能
+- 展示监控数据（CPU、内存、磁盘、负载）
+- 实现进程管理功能
+- 对接监控 API
+
+## 执行步骤（How）
+
+### 开发工作流
+
+在开始执行前复制以下清单，并在每一步完成后显式标记状态。
+
+- Step 1：创建目录结构（views/Overview/）
+- Step 2：定义类型（types/index.ts）
+- Step 3：实现 API 接口（api/monitor.ts）
+- Step 4：创建服务器列表导航组件（ServerNav.vue）
+- Step 5：创建监控数据展示组件（MonitorStats.vue）
+- Step 6：创建圆形进度组件（CircleProgress.vue）
+- Step 7：创建进程管理组件（ProcessManager.vue）
+- Step 8：创建网络和 IO 图表组件（NetworkIOChart.vue）
+- Step 9：实现主页面逻辑（index.vue）
+- Step 10：配置路由；（反馈闭环）验证所有功能是否正常工作
+
+### 核心开发要点
+
+1. **路由配置**
+   - 路由路径：`/`（不要使用 `/dashboard`）
+   - 这是系统的首页，展示所有服务器概览
+
+2. **页面布局**
+   - 左侧导航区：服务器列表导航
+   - 主内容区：监控数据展示
+   - 右侧信息区：服务器基础信息和应用列表
+
+3. **监控数据展示**
+   - 使用圆形图表展示 CPU、内存、磁盘、负载
+   - 外框没有线条，圆圈是主题颜色的线条
+   - 内存和磁盘的使用率注意是百分比，要除以 100
+
+4. **交互规则**
+   - 点击服务器列表中的服务器，切换显示对应服务器的监控数据
+   - 鼠标移动到圆形监控指标上，显示详细信息
+   - 在详细信息面板中，可以移动鼠标到进程列表进行操作
+   - 支持杀死进程等简单操作
+
+## 输出结果（What）
+
+完成开发后，应产出以下内容：
+
+1. **类型定义**：MonitorStats、ProcessInfo 等
+2. **API 接口**：fetchMonitorStats、fetchProcessInfo 等
+3. **组件文件**：ServerNav、MonitorStats、CircleProgress、ProcessManager
+4. **主页面**：index.vue 包含所有逻辑
+5. **路由配置**：路由路径为 `/`
+
+## 参考文件
+
+详细参考信息请参见：
+
+- [api.md](./api.md) - API 接口示例数据
+- [types-reference.md](./types-reference.md) - 类型定义
+- [components-guide.md](./components-guide.md) - 组件实现指南
+
+## 快速参考
+
+### 路由配置
+
+```typescript
+{
+  path: '/',
+  name: 'Overview',
+  component: () => import('@/views/Overview/index.vue')
+}
+```
+
+### 主要功能
+
+- 服务器列表导航
+- 监控数据展示（CPU、内存、磁盘、负载）
+- 进程管理（查看、杀死进程）
+- 网络流量和 IO 图表
+- 服务器基础信息展示
+
+### API 接口
+
+- GET /api/v1/server - 获取所有服务器
+- GET /api/v1/server/{id} - 获取单个服务器
+- GET /api/v1/monitor/stats/{server_id} - 获取系统统计
+- GET /api/v1/monitor/stats/io/{server_id}/{disk} - 获取单个磁盘 IO
+- GET /api/v1/monitor/stats/net/{server_id}/{net} - 获取单个网络 IO
+- GET /api/v1/monitor/base/{server_id}/{page}/{count} - 获取基础监控数据
+
+## 页面布局详解
 
 ### 左侧导航区
+
 - 位置：content 区域左上角，顶格对齐
 - 内容：服务器列表导航
 - 显示：服务器名称和状态
@@ -20,21 +115,22 @@ description: "概览页面设计规范。包含服务器列表导航、监控数
 ### 主内容区
 
 #### 基础数据展示
+
 - 执行脚本内容
 - 已经安装应用数量
 
 #### 监控数据展示框
+
 - 布局：一个框内展示四个监控指标，在基础数据下面，宽度是 100%
 - 展示方式：圆形展示
 - 外框是没有线条的，圆圈是主题颜色的线条，线条是细的
 - 监控指标：
-  - CPU： 圆圈下面展示： ( 0.12 / 4 ) 核
-  - 内存： 圆圈下面展示： 1.28 GB / 7.38 GB
-  - 磁盘： 圆圈下面展示： 30.01 GB / 196.49 GB
-  - 负载： 圆圈下面展示： 运行流畅
-- 内存和磁盘的使用率，注意是百分比，要除以100
+  - CPU：圆圈下面展示：( 0.12 / 4 ) 核
+  - 内存：圆圈下面展示：1.28 GB / 7.38 GB
+  - 磁盘：圆圈下面展示：30.01 GB / 196.49 GB
+  - 负载：圆圈下面展示：运行流畅
 
-##### 鼠标悬停交互
+#### 鼠标悬停交互
 
 **CPU 悬停显示：**
 - 所有 CPU 核数和使用率
@@ -54,54 +150,39 @@ description: "概览页面设计规范。包含服务器列表导航、监控数
 - 5 分钟负载
 - 15 分钟负载
 
-##### 交互规则
-1. 点击服务器列表中的服务器，切换显示对应服务器的监控数据
-2. 鼠标移动到圆形监控指标上，显示详细信息
-3. 在详细信息面板中，可以移动鼠标到进程列表进行操作
-4. 支持杀死进程等简单操作
-5. monitor-item的下面是漂浮窗口
+#### 网卡流量和 IO 详细信息
 
-#### 网卡流量和io的详细信息
-
-- 10秒请求一次，然后展示在前端页面进行保留
+- 10 秒请求一次，然后展示在前端页面进行保留
 - 做折线图
-- 一个矿口可以选择展示网卡流量或io的详细信息，select选择
-- 另外一个select可以选择哪个网卡或者哪个磁盘
+- 一个窗口可以选择展示网卡流量或 IO 的详细信息，select 选择
+- 另外一个 select 可以选择哪个网卡或者哪个磁盘
 
 ### 右侧信息区
+
 - 位置：右侧固定显示
 - 内容：
-  - 服务器基础信息，包括： 架构信息，版本信息，运行时间
-  - 应用详细列表，但是只展示name和状态
+  - 服务器基础信息，包括：架构信息，版本信息，运行时间
+  - 应用详细列表，但是只展示 name 和状态
 
-### 注意事项
+## 注意事项
+
 - 交互的时候，容易出现，鼠标移动不到详细页面上面，因为距离太远，鼠标已经跳出去了
-- 提供一个解决思路， margin和pedding都是0px
+- 提供一个解决思路，margin 和 padding 都是 0px
+- 不要为了写这个页面，把外层的 nav 和 header 给搞没了
+- 监控数据 5 秒请求一次
 
-## API 接口
-```
-GET /api/v1/monitor/stats/{server_id}              # 获取系统统计
-GET /api/v1/monitor/stats/io/{server_id}/{disk}     # 获取单个磁盘IO
-GET /api/v1/monitor/stats/io/{server_id}/all       # 获取所有磁盘IO
-GET /api/v1/monitor/stats/net/{server_id}/{net}    # 获取单个网络IO
-GET /api/v1/monitor/stats/net/{server_id}/all      # 获取所有网络IO
-GET /api/v1/monitor/base/{server_id}/{page}/{count} # 获取基础监控数据
-GET /api/v1/monitor/disk/{server_id}/{page}/{count} # 获取磁盘监控数据
-GET /api/v1/monitor/net/{server_id}/{page}/{count}  # 获取网络监控数据
-GET /api/v1/server           # 获取所有服务器
-GET /api/v1/server/{id}      # 获取单个服务器
-GET /api/v1/application           # 获取所有应用
-GET /api/v1/application/{id}      # 获取单个应用
-```
+## 设计规范
 
-## 设计要点
 - 遵循 Squirrel 紧凑风格页面设计规范（调用 `compact-page-style` skill）
 - 遵循布局导航栏和顶部栏设计规范（调用 `layout-nav-header` skill）
 - 使用圆形图表展示监控数据
 - 悬停交互流畅自然
 - 进程操作简单直观
-- 不要为了写这个页面，把外层的 nav和header给搞没了
 
-## 接口案例文件
+## 最佳实践
 
-- .trae\skills\overview\api.md
+1. **数据刷新**：监控数据 5 秒请求一次，网络和 IO 数据 10 秒请求一次
+2. **交互优化**：确保悬停面板和触发元素之间的距离为 0，避免鼠标移动时面板消失
+3. **性能优化**：使用 computed 缓存计算结果，避免不必要的重新渲染
+4. **错误处理**：API 调用添加 try-catch 处理
+5. **国际化**：所有文本使用 $t() 函数包裹
